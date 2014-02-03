@@ -1,3 +1,4 @@
+
 # `stravamous`
 
 `stravamous` is my attempt to anonymize running or cycling GPS tracks that are going
@@ -30,3 +31,4 @@ of your ride. This has the following disadvantages:
 I haven't done much on this and it barely works for my immediate needs. That will change depending
 on how much time I decide to put into this and how many others might be using it. Drop me a note if
 you want to use this and have feature requests so I can help prioritize my efforts.
+
