@@ -1,0 +1,126 @@
+import copy
+import datetime
+import logging
+import os
+import time
+
+import configurati
+import gpxpy
+
+import converter
+import gps
+
+#import gpxtools
+from src import progress_db, splices
+
+
+def out_for_in(in_path):
+    return '{0}.gpx'.format(os.path.splitext(os.path.basename(in_path))[0])
+
+
+class StravamousApp(object):
+
+    def __init__(self):
+        # config
+        cf = os.path.expanduser('~/.stravamous/config.yaml')
+        self.config = configurati.configure(config=cf, spec='config.py')
+
+        # logging
+        log_format = '%(asctime)s [%(levelname)s] %(message)s'
+        logging.basicConfig(format=log_format)
+        self.logger = logging.getLogger()
+        if self.config.debug:
+            self.logger.setLevel(logging.DEBUG)
+        self.logger.debug('{0}'.format('running with config: {0}'.format(self.config)))
+
+        # gps mounted?
+        self.gps = gps.GPS(self.config)
+        if self.gps.mounted:
+            self.logger.info('GPS is currently mounted')
+            #self.gps.tracks
+
+        # db
+        self.db = progress_db.ProgressDB(self.config)
+
+        # splices
+        self.splices = splices.Splices(self.config)
+
+
+    def process_tracks(self):
+        """
+        :rtype : GPX
+        """
+        self.logger.debug('process_tracks()')
+        for input_path in self.gps.tracks:
+            c = converter.Converter(self.config, input_path)
+            try:
+                self.logger.debug('converting {0}'.format(input_path))
+                c.convert()
+            except Exception as exception:
+                self.logger.error('EXCEPTION trying to convert {0}: {1}'.format(exception, input_path))
+                continue
+            else:
+                # get converted text and make a gpx object
+                gpx = gpxpy.parse(c.gpx_text)
+                if not gpx.tracks[0].get_points_no():
+                    self.logger.debug('No segments/points in {0} to convert'.format(input_path))
+                    continue
+                # call gpx cleanup
+
+                # outbound
+                (splice, track, segment, index) = self.splices.outbound_splice_for_gpx(gpx)
+                if splice is None:
+                    continue
+                splice = copy.deepcopy(splice)
+                self.logger.debug('DBG befor changing time: 0 point with time?: {0}'.format(splice.points[0]))
+                outbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[-1])
+                self.logger.debug('{0} seconds between last splice point and new track start'.format(outbound_secs_diff))
+                self.logger.debug('first point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
+                del(gpx.tracks[track].segments[segment].points[:index + 1])
+                self.logger.debug('first point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
+                splice.adjust_time(datetime.timedelta(0, outbound_secs_diff))
+                gpx.tracks[track].segments[segment].insert(splice)
+
+                # inbound
+                (splice, track, segment, index) = self.splices.inbound_splice_for_gpx(gpx)
+                if splice is None:
+                    continue
+                splice = copy.deepcopy(splice)
+                self.logger.debug('DBG befor changing time: 0 point with time?: {0}'.format(splice.points[0]))
+                inbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[0])
+                self.logger.debug('{0} seconds between first splice point and new track end'.format(inbound_secs_diff))
+                self.logger.debug('last point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
+                del(gpx.tracks[track].segments[segment].points[index - 1:])
+                self.logger.debug('last point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
+                splice.adjust_time(datetime.timedelta(0, inbound_secs_diff))
+                gpx.tracks[track].segments[segment].join(splice)
+
+                self.logger.debug('XML: {0}'.format(gpx.to_xml()))
+
+                spliced_path = os.path.join(self.config.storage.root_path, self.config.storage.spliced_path, out_for_in(input_path))
+                spliced_path = os.path.expanduser(spliced_path)
+                self.logger.debug('Opening {0} for writing spliced output.'.format(spliced_path))
+                output_fd = open(spliced_path, 'w')
+                output_fd.write(gpx.to_xml())
+                output_fd.close()
+                self.logger.debug('Output file closed.')
+
+
+
+
+    def run(self):
+        if self.config.run_options.once:
+            self.logger.debug('Running the processor just once.')
+            self.process_tracks()
+
+
+        else:
+            while True:
+                self.logger.debug('Entering infinite loop with {0} seconds of sleep.'.format(self.config.pollworker.frequency))
+                self.process_tracks()
+                time.sleep(self.config.pollworker.frequency)
+
+
+if __name__ == '__main__':
+    app = StravamousApp()
+    app.run()
