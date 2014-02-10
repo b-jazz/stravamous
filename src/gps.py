@@ -21,7 +21,8 @@ class GPS(object):
         self.logger.debug('calling gps.mounted()')
         try:
             stats = os.statvfs(self.config.gps.mount_path)
-            self.logger.debug('Found GPS at path: {0}'.format(self.config.gps.mount_path))
+            self.logger.debug('Found GPS at path: {0} with blocks free: {1}'.format(self.config.gps.mount_path,
+                                                                                    stats.f_bfree))
         except OSError:
             self.logger.debug('Unable to locate GPS at path: {0}'.format(self.config.gps.mount_path))
             return False
