@@ -8,7 +8,7 @@ Strava does have a feature to hide the first 500 - 1000m
 of your ride. This has the following disadvantages:
 
 + It removes some of the distance of your ride. You might not like that.
-+ It is possible, with enough date, to get a good idea on where you might live.
++ It is possible, with enough data, to get a good idea on where you might live.
 + You have to give your/an address to Strava. I prefer not to give out that information.
 
 ## Features
