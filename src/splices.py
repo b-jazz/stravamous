@@ -80,4 +80,3 @@ class Splices(object):
     #@property
     #def outbounds(self):
     #    return self.splices.outbounds
-

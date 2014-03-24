@@ -40,4 +40,3 @@ class GPS(object):
 
     def unmount(self):
         pass
-

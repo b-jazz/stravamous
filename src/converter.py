@@ -39,10 +39,3 @@ class Converter(object):
             except Exception as exception:
                 self.logger.error('open().read() exception: {0}, of type: {1}'.format(exception, exception.args))
                 raise
-
-
-
-
-
-
-

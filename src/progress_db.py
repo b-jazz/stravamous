@@ -21,5 +21,3 @@ class ProgressDB(object):
             unpickler = pickle.Unpickler(db_file)
             self.progress_list = unpickler.load()
             db_file.close()
-
-
