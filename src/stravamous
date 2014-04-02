@@ -68,6 +68,12 @@ class StravamousApp(object):
         """
         self.logger.debug('process_tracks()')
         for input_path in self.gps.tracks:
+
+            # TODO: check to see if we have already processed this particular track, if so, skip
+            if self.db.exists(input_path):
+                self.logger.debug('Skipping {0} since it has already been processed.'.format(input_path))
+                continue
+
             c = converter.Converter(self.config, input_path)
             try:
                 self.logger.debug('converting {0}'.format(input_path))
@@ -75,53 +81,55 @@ class StravamousApp(object):
             except Exception as exception:
                 self.logger.error('EXCEPTION trying to convert {0}: {1}'.format(exception, input_path))
                 continue
-            else:
-                # get converted text and make a gpx object
-                gpx = gpxpy.parse(c.gpx_text)
-                if not gpx.tracks[0].get_points_no():
-                    self.logger.debug('No segments/points in {0} to convert'.format(input_path))
-                    continue
-                # call gpx cleanup
 
-                # outbound
-                (splice, track, segment, index) = self.splices.outbound_splice_for_gpx(gpx)
-                if splice is None:
-                    continue
-                splice = copy.deepcopy(splice)
-                self.logger.debug('DBG befor changing time: 0 point with time?: {0}'.format(splice.points[0]))
-                outbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[-1])
-                self.logger.debug('{0} seconds between last splice point and new track start'.format(outbound_secs_diff))
-                self.logger.debug('first point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
-                del(gpx.tracks[track].segments[segment].points[:index + 1])
-                self.logger.debug('first point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
-                splice.adjust_time(datetime.timedelta(0, outbound_secs_diff))
-                gpx.tracks[track].segments[segment].insert(splice)
-
-                # inbound
-                (splice, track, segment, index) = self.splices.inbound_splice_for_gpx(gpx)
-                if splice is None:
-                    continue
-                splice = copy.deepcopy(splice)
-                self.logger.debug('DBG befor changing time: 0 point with time?: {0}'.format(splice.points[0]))
-                inbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[0])
-                self.logger.debug('{0} seconds between first splice point and new track end'.format(inbound_secs_diff))
-                self.logger.debug('last point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
-                del(gpx.tracks[track].segments[segment].points[index - 1:])
-                self.logger.debug('last point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
-                splice.adjust_time(datetime.timedelta(0, inbound_secs_diff))
-                gpx.tracks[track].segments[segment].join(splice)
-
-                self.logger.debug('XML: {0}'.format(gpx.to_xml()))
-
-                spliced_path = os.path.join(self.config.storage.root_path, self.config.storage.spliced_path, out_for_in(input_path))
-                spliced_path = os.path.expanduser(spliced_path)
-                self.logger.debug('Opening {0} for writing spliced output.'.format(spliced_path))
-                output_fd = open(spliced_path, 'w')
-                output_fd.write(gpx.to_xml())
-                output_fd.close()
-                self.logger.debug('Output file closed.')
+            # TODO: add this file to the list of already processed files.
+            self.db.add(input_path)
 
 
+            # get converted text and make a gpx object
+            gpx = gpxpy.parse(c.gpx_text)
+            if not gpx.tracks[0].get_points_no():
+                self.logger.debug('No segments/points in {0} to convert'.format(input_path))
+                continue
+            # call gpx cleanup
+
+            # outbound
+            (splice, track, segment, index) = self.splices.outbound_splice_for_gpx(gpx)
+            if splice is None:
+                continue
+            splice = copy.deepcopy(splice)
+            self.logger.debug('DBG before changing time: 0 point with time?: {0}'.format(splice.points[0]))
+            outbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[-1])
+            self.logger.debug('{0} seconds between last splice point and new track start'.format(outbound_secs_diff))
+            self.logger.debug('first point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
+            del(gpx.tracks[track].segments[segment].points[:index + 1])
+            self.logger.debug('first point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
+            splice.adjust_time(datetime.timedelta(0, outbound_secs_diff))
+            gpx.tracks[track].segments[segment].insert(splice)
+
+            # inbound
+            (splice, track, segment, index) = self.splices.inbound_splice_for_gpx(gpx)
+            if splice is None:
+                continue
+            splice = copy.deepcopy(splice)
+            self.logger.debug('DBG before changing time: 0 point with time?: {0}'.format(splice.points[0]))
+            inbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[0])
+            self.logger.debug('{0} seconds between first splice point and new track end'.format(inbound_secs_diff))
+            self.logger.debug('last point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
+            del(gpx.tracks[track].segments[segment].points[index - 1:])
+            self.logger.debug('last point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
+            splice.adjust_time(datetime.timedelta(0, inbound_secs_diff))
+            gpx.tracks[track].segments[segment].join(splice)
+
+            self.logger.debug('XML chunk: {0}'.format(gpx.to_xml()[:100]))
+
+            spliced_path = os.path.join(self.config.storage.root_path, self.config.storage.spliced_path, out_for_in(input_path))
+            spliced_path = os.path.expanduser(spliced_path)
+            self.logger.debug('Opening {0} for writing spliced output.'.format(spliced_path))
+            output_fd = open(spliced_path, 'w')
+            output_fd.write(gpx.to_xml())
+            output_fd.close()
+            self.logger.debug('Output file closed.')
 
 
     def run(self):
