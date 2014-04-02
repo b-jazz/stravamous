@@ -1,5 +1,6 @@
 __author__ = 'bryce'
 
+import subprocess
 import logging
 import re
 import os
@@ -11,10 +12,9 @@ class GPS(object):
         self.logger = logging.getLogger()
         print(__name__)
         self.logger.info('name is {0}'.format(__name__))
-        self.logger.info('level is {0}'.format(self.logger.getEffectiveLevel()))
+        self.logger.info('logging level is {0}'.format(self.logger.getEffectiveLevel()))
         self.config = config
         self.tracks_re = re.compile(self.config.storage.input_filename_re)
-        pass
 
     @property
     def mounted(self):
@@ -32,11 +32,37 @@ class GPS(object):
     def tracks(self):
         tracks_path = os.path.expanduser(os.path.join(self.config.gps.mount_path, self.config.gps.tracks_path))
         self.logger.debug('Looking up activities in path: {0}'.format(tracks_path))
-        raw_tracks = os.listdir(tracks_path)
+        try:
+            raw_tracks = os.listdir(tracks_path)
+        except FileNotFoundError as ex:
+            self.logger.error('Expected to find the GPS mounted at {0}, but could not find it.'.format(tracks_path))
+            return []
         tracks = [os.path.join(tracks_path, track) for track in raw_tracks if self.tracks_re.match(track)]
         for track in tracks:
             self.logger.debug('Found track file: {0}'.format(track))
         return tracks
 
     def unmount(self):
-        pass
+        """
+        Maybe we should read in the unmount command from the config so that an OS other than MacOSX can unmount
+        their GPS as well.
+        :rtype:None
+        """
+        self.logger.debug('Attempting to unmount the GPS.')
+        # diskutil unmount /Volumes/Untitled
+        cmd = ['diskutil', 'unmount', self.config.gps.mount_path]
+        sub = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        try:
+            (stderr, stdout) = sub.communicate(timeout=30)
+        except TimeoutExpired as ex:
+            self.logger.error(ex)
+            sub.kill()
+            (stderr, stdout) = sub.communicate()
+
+        # TODO: check return value and possibly provide more info to user
+
+        if stderr:
+            self.logger.error('unmount "error": {0}'.format(stderr.decode()))  # TODO: double check how to deal with a stream object
+        if stdout:
+            self.logger.debug('unmount output: {0}'.format(stdout.decode()))
+
