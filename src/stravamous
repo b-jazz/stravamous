@@ -30,14 +30,21 @@ def out_for_in(in_path):
 class StravamousApp(object):
 
     def __init__(self):
-        # config
-        cf = os.path.expanduser('~/.stravamous/config.yaml')
-        self.config = configurati.configure(config=cf, spec='config.py')
-
         # logging
         log_format = '%(asctime)s [%(levelname)s] %(message)s'
         logging.basicConfig(format=log_format)
         self.logger = logging.getLogger()
+
+        # config
+        cf = os.path.expanduser('~/.stravamous/config.yaml')
+        try:
+            self.config = configurati.configure(config=cf, spec='config.py')
+        except FileNotFoundError:
+            self.logger.error('Unable to find configuration file: {0}.'.format(cf))
+            self.logger.error('Stravamous is unable to function without a definition of tracks to splice. Exiting.')
+            sys.exit(-1)
+
+        # now that we have a config file, set the debug logging
         if self.config.debug:
             self.logger.setLevel(logging.DEBUG)
         self.logger.debug('{0}'.format('running with config: {0}'.format(self.config)))
