@@ -75,7 +75,7 @@ class Splices(object):
                 return results
             else:
                 self.logger.debug('too far: {0} meters - {1} and {2}'.format(dist, location, inbound['location']))
-        return None
+        return None, None, None, None
 
     #@property
     #def outbounds(self):
