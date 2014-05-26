@@ -95,31 +95,29 @@ class StravamousApp(object):
 
             # outbound
             (splice, track, segment, index) = self.splices.outbound_splice_for_gpx(gpx)
-            if splice is None:
-                continue
-            splice = copy.deepcopy(splice)
-            self.logger.debug('DBG before changing time: 0 point with time?: {0}'.format(splice.points[0]))
-            outbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[-1])
-            self.logger.debug('{0} seconds between last splice point and new track start'.format(outbound_secs_diff))
-            self.logger.debug('first point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
-            del(gpx.tracks[track].segments[segment].points[:index + 1])
-            self.logger.debug('first point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
-            splice.adjust_time(datetime.timedelta(0, outbound_secs_diff))
-            gpx.tracks[track].segments[segment].insert(splice)
+            if splice:
+                splice = copy.deepcopy(splice)
+                self.logger.debug('DBG before changing time: 0 point with time?: {0}'.format(splice.points[0]))
+                outbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[-1])
+                self.logger.debug('{0} seconds between last splice point and new track start'.format(outbound_secs_diff))
+                self.logger.debug('first point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
+                del(gpx.tracks[track].segments[segment].points[:index + 1])
+                self.logger.debug('first point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
+                splice.adjust_time(datetime.timedelta(0, outbound_secs_diff))
+                gpx.tracks[track].segments[segment].insert(splice)
 
             # inbound
             (splice, track, segment, index) = self.splices.inbound_splice_for_gpx(gpx)
-            if splice is None:
-                continue
-            splice = copy.deepcopy(splice)
-            self.logger.debug('DBG before changing time: 0 point with time?: {0}'.format(splice.points[0]))
-            inbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[0])
-            self.logger.debug('{0} seconds between first splice point and new track end'.format(inbound_secs_diff))
-            self.logger.debug('last point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
-            del(gpx.tracks[track].segments[segment].points[index - 1:])
-            self.logger.debug('last point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
-            splice.adjust_time(datetime.timedelta(0, inbound_secs_diff))
-            gpx.tracks[track].segments[segment].join(splice)
+            if splice:
+                splice = copy.deepcopy(splice)
+                self.logger.debug('DBG before changing time: 0 point with time?: {0}'.format(splice.points[0]))
+                inbound_secs_diff = gpx.tracks[track].segments[segment].points[index].time_difference(splice.points[0])
+                self.logger.debug('{0} seconds between first splice point and new track end'.format(inbound_secs_diff))
+                self.logger.debug('last point before trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
+                del(gpx.tracks[track].segments[segment].points[index - 1:])
+                self.logger.debug('last point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
+                splice.adjust_time(datetime.timedelta(0, inbound_secs_diff))
+                gpx.tracks[track].segments[segment].join(splice)
 
             self.logger.debug('XML chunk: {0}'.format(gpx.to_xml()[:100]))
 
