@@ -7,17 +7,15 @@ import os
 import time
 import sys
 
-print(sys.path)
-print(os.getcwd())
-#sys.path.append(os.getcwd())
+# print(sys.path)
+# print(os.getcwd())
+# sys.path.append(os.getcwd())
 
 import configurati
 import gpxpy
 
 import converter
 import gps
-
-#import gpxtools
 import progress_db
 import splices
 
@@ -61,6 +59,10 @@ class StravamousApp(object):
         # splices
         self.splices = splices.Splices(self.config)
 
+        # keep track of how many splices we performed on the last file so we can cleanly
+        # unmount on two splices
+        self.last_splice_count = 0
+
 
     def process_tracks(self):
         """
@@ -68,8 +70,9 @@ class StravamousApp(object):
         """
         self.logger.debug('process_tracks()')
         for input_path in self.gps.tracks:
+            self.last_splice_count = 0  # reset for each file
 
-            # TODO: check to see if we have already processed this particular track, if so, skip
+            # check to see if we have already processed this particular track, if so, skip
             if self.db.exists(input_path):
                 self.logger.debug('Skipping {0} since it has already been processed.'.format(input_path))
                 continue
@@ -82,9 +85,8 @@ class StravamousApp(object):
                 self.logger.error('EXCEPTION trying to convert {0}: {1}'.format(exception, input_path))
                 continue
 
-            # TODO: add this file to the list of already processed files.
+            # add this file to the list of already processed files.
             self.db.add(input_path)
-
 
             # get converted text and make a gpx object
             gpx = gpxpy.parse(c.gpx_text)
@@ -105,6 +107,7 @@ class StravamousApp(object):
                 self.logger.debug('first point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[0]))
                 splice.adjust_time(datetime.timedelta(0, outbound_secs_diff))
                 gpx.tracks[track].segments[segment].insert(splice)
+                self.last_splice_count += 1
 
             # inbound
             (splice, track, segment, index) = self.splices.inbound_splice_for_gpx(gpx)
@@ -118,6 +121,7 @@ class StravamousApp(object):
                 self.logger.debug('last point after trim = {0}'.format(gpx.tracks[track].segments[segment].points[-1]))
                 splice.adjust_time(datetime.timedelta(0, inbound_secs_diff))
                 gpx.tracks[track].segments[segment].join(splice)
+                self.last_splice_count += 1
 
             self.logger.debug('XML chunk: {0}'.format(gpx.to_xml()[:100]))
 
@@ -134,7 +138,7 @@ class StravamousApp(object):
         if self.config.run_options.once:
             self.logger.debug('Running the processor just once.')
             self.process_tracks()
-            if self.config.gps.unmount:
+            if self.config.gps.unmount and self.last_splice_count == 2:
                 self.gps.unmount()
         else:
             while True:
