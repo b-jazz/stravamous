@@ -1,9 +1,9 @@
-__author__ = 'bryce'
-
 import subprocess
 import logging
 import re
 import os
+
+__author__ = 'bryce'
 
 
 class GPS(object):
@@ -34,7 +34,7 @@ class GPS(object):
         self.logger.debug('Looking up activities in path: {0}'.format(tracks_path))
         try:
             raw_tracks = os.listdir(tracks_path)
-        except FileNotFoundError as ex:
+        except FileNotFoundError:
             self.logger.error('Expected to find the GPS mounted at {0}, but could not find it.'.format(tracks_path))
             return []
         tracks = [os.path.join(tracks_path, track) for track in raw_tracks if self.tracks_re.match(track)]
@@ -44,17 +44,20 @@ class GPS(object):
 
     def unmount(self):
         """
-        Maybe we should read in the unmount command from the config so that an OS other than MacOSX can unmount
-        their GPS as well.
         :rtype:None
         """
         self.logger.debug('Attempting to unmount the GPS.')
-        # diskutil unmount /Volumes/Untitled
-        cmd = ['diskutil', 'unmount', self.config.gps.mount_path]
+        # diskutil unmount /Volumes/GARMIN or umount /media/user/GARMIN
+        unmount_subcmd = self.config.gps.unmount_subcmd
+        cmd = [self.config.gps.unmount_cmd]
+        if unmount_subcmd:
+            cmd.append(unmount_subcmd)
+        cmd.append(self.config.gps.mount_path)
+
         sub = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         try:
             (stderr, stdout) = sub.communicate(timeout=30)
-        except TimeoutExpired as ex:
+        except subprocess.TimeoutExpired as ex:
             self.logger.error(ex)
             sub.kill()
             (stderr, stdout) = sub.communicate()
@@ -62,7 +65,7 @@ class GPS(object):
         # TODO: check return value and possibly provide more info to user
 
         if stderr:
-            self.logger.error('unmount "error": {0}'.format(stderr.decode()))  # TODO: double check how to deal with a stream object
+            # TODO: double check how to deal with a stream object
+            self.logger.error('unmount "error": {0}'.format(stderr.decode()))
         if stdout:
             self.logger.debug('unmount output: {0}'.format(stdout.decode()))
-

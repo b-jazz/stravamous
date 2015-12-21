@@ -1,8 +1,8 @@
-__author__ = 'bryce'
-
 import logging
 import os
 import pickle
+
+__author__ = 'bryce'
 
 
 class ProgressDB(object):
@@ -48,4 +48,3 @@ class ProgressDB(object):
 
     def dump(self):
         self.logger.debug('Dumping database entries: ({0})'.format(self.progress_dict))
-

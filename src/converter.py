@@ -1,8 +1,8 @@
-__author__ = 'bryce'
-
 import logging
 import os
 import subprocess
+
+__author__ = 'bryce'
 
 
 def out_for_in(in_path):

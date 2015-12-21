@@ -38,7 +38,7 @@ class StravamousApp(object):
         try:
             self.config = configurati.configure(config=cf, spec='config.py')
         except FileNotFoundError:
-            self.logger.error('Unable to find configuration file: {0}.'.format(cf))
+            self.logger.error('Unable to find configuration file: {0}'.format(cf))
             self.logger.error('Stravamous is unable to function without a definition of tracks to splice. Exiting.')
             sys.exit(-1)
 
@@ -51,7 +51,7 @@ class StravamousApp(object):
         self.gps = gps.GPS(self.config)
         if self.gps.mounted:
             self.logger.info('GPS is currently mounted')
-            #self.gps.tracks
+            # self.gps.tracks
 
         # db
         self.db = progress_db.ProgressDB(self.config)
@@ -62,7 +62,6 @@ class StravamousApp(object):
         # keep track of how many splices we performed on the last file so we can cleanly
         # unmount on two splices
         self.last_splice_count = 0
-
 
     def process_tracks(self):
         """
@@ -132,7 +131,6 @@ class StravamousApp(object):
             output_fd.write(gpx.to_xml())
             output_fd.close()
             self.logger.debug('Output file closed.')
-
 
     def run(self):
         if self.config.run_options.once:

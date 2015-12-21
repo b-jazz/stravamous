@@ -21,7 +21,9 @@ run_options = {'once': optional(type=int, default=0)}
 
 gps = {'mount_path': optional(type=str, default='/Volumes/GARMIN'),
        'tracks_path': optional(type=str, default='Garmin/Activities'),
-       'unmount': optional(type=int, default=1)}
+       'unmount': optional(type=int, default=1),
+       'unmount_cmd': optional(type=str, default='/bin/umount'),
+       'unmount_subcmd': optional(type=str, default=None)}
 
 gpsbabel = {'exe': optional(type=str, default='/Applications/GPSBabelFE.app/Contents/MacOS/gpsbabel')}
 

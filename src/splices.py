@@ -108,7 +108,6 @@ class Splices(object):
                 self.logger.debug('too far: {0}m - {1} and {2}'.format(dist, location, inbound['location']))
         return None, None, None, None
 
-    #@property
-    #def outbounds(self):
+    # @property
+    # def outbounds(self):
     #    return self.splices.outbounds
-
