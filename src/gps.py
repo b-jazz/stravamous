@@ -3,8 +3,6 @@ import logging
 import re
 import os
 
-__author__ = 'bryce'
-
 
 class GPS(object):
 

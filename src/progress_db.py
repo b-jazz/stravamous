@@ -2,8 +2,6 @@ import logging
 import os
 import pickle
 
-__author__ = 'bryce'
-
 
 class ProgressDB(object):
 
