@@ -28,6 +28,4 @@ gps = {'mount_path': optional(type=str, default='/Volumes/GARMIN'),
 gpsbabel = {'exe': optional(type=str, default='/Applications/GPSBabelFE.app/Contents/MacOS/gpsbabel')}
 
 splices = {'root_path': optional(type=str, default='~/.stravamous/splices'),
-           'precision': optional(type=int, default=25),
-           'outbounds': optional(type=list, default=[]),
-           'inbounds': optional(type=list, default=[])}
+           'precision': optional(type=int, default=25)}
