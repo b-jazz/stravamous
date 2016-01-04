@@ -67,50 +67,52 @@ class StravamousApp(object):
 
     def set_up_configuration(self):
         """
-
+        Define all of the possible configuration variables that can be set in a config file,
+        passed on the command line, and set via ENV VARS. Make sure any path names have their
+        ENV VARS expanded before use.
         """
-        parser = configargparse.ArgParser(default_config_files=['$HOME/.stravamous/config.ini'])
-        #parser = configargparse.ArgParser()
+        default_config = os.path.expandvars('$HOME/.stravamous/config.ini')
+        parser = configargparse.ArgParser(default_config_files=[default_config])
+
         parser.add('--debug',
                    default=False,
                    action='store_true',
                    help='Turn on verbose debug logging')
         parser.add('-c', '--config',
-                   default='$HOME/.stravamous/config.ini',
                    is_config_file_arg=True,
-                   help='The (full) pathname of your config file')
+                   help='The (full) pathname of any additional config file')
         parser.add('--storage_root',
                    default='$HOME/.stravamous',
-                   help='Directory to find your configs, splices, and output')
+                   help='Directory to find your configs, splices, intermediate and output files')
         parser.add('--progress_db',
                    default='progress.db',
                    help='The DB name for storing previously processed segments')
         parser.add('--mount_path',
                    default='/media/$USER/GARMIN',
-                   help='Path to find GPS mountpoint. ENVVARS will be expanded')
+                   help='Path to find GPS mountpoint. Environment variables will be expanded')
         parser.add('--input_filename_re',
                    default='^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}.fit$',
-                   help='Regex for matching the filename input to gpsbabel')
+                   help='Regex for matching the GPS file that will input to gpsbabel')
         parser.add('--tracks_path',
                    default='Garmin/Activities',
                    help='Relative path to the mount_path where track files are kept on GPS')
         parser.add('--distance_precision',
                    default=25,
                    type=int,
-                   help='Distance in meters that a track point needs to be within the matching splice point for a match')
-        parser.add('--unmount_gps',
+                   help='Distance (in meters) that a point needs to be within the matching splice point for a match')
+        parser.add('--leave_gps_mounted',
                    default=False,
                    action='store_true',
                    help='Whether the unmount_cmd/subcmd should be called after processing')
+        parser.add('--gpsbabel_cmd',
+                   default='/usr/bin/gpsbabel',
+                   help='Full path to gpsbabel program to convert .fit to .gpx')
         parser.add('--unmount_cmd',
                    default='/bin/umount',
                    help='Command to unmount the GPS')
         parser.add('--unmount_subcmd',
                    default=None,
                    help='A subcommand (if needed) in order to unmount the GPS')
-        parser.add('--gpsbabel_exe',
-                   default='/usr/bin/gpsbabel',
-                   help='Full path to gpsbabel program to convert .fit to .gpx')
 
         args = parser.parse_args()
         self.expand_arg_vars(args)
@@ -121,12 +123,14 @@ class StravamousApp(object):
         Any of the pathnames are allowed to have environmental variables such as $USER or $HOME and need to be
         expanded before any use.
         """
-        args.config = os.path.expandvars(args.config)
+        if args.config:
+            args.config = os.path.expandvars(args.config)
         args.storage_root = os.path.expandvars(args.storage_root)
         args.progress_db = os.path.expandvars(args.progress_db)
         args.mount_path = os.path.expandvars(args.mount_path)
         args.tracks_path = os.path.expandvars(args.tracks_path)
-        args.gpsbabel_exe = os.path.expandvars(args.gpsbabel_exe)
+        args.unmount_cmd = os.path.expandvars(args.unmount_cmd)
+        args.gpsbabel_cmd = os.path.expandvars(args.gpsbabel_cmd)
 
     def process_tracks(self):
         """
@@ -201,7 +205,7 @@ class StravamousApp(object):
     def run(self):
         self.logger.debug('Running the processor just once.')
         self.process_tracks()
-        if self.config.unmount_gps and self.last_splice_count == 2:
+        if not self.config.leave_gps_mounted and self.last_splice_count == 2:
             self.gps.unmount()
 
         # if self.config.run_options.once:

@@ -20,7 +20,7 @@ class Converter(object):
         self.gpx_text = None
 
     def convert(self):
-        command = [self.config.gpsbabel_exe,
+        command = [self.config.gpsbabel_cmd,
                    '-i', 'garmin_fit',
                    '-f', self.input_file,
                    '-o', 'gpx,garminextensions',
