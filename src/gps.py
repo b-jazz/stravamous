@@ -12,23 +12,24 @@ class GPS(object):
         self.logger.info('name is {0}'.format(__name__))
         self.logger.info('logging level is {0}'.format(self.logger.getEffectiveLevel()))
         self.config = config
-        self.tracks_re = re.compile(self.config.storage.input_filename_re)
+        self.tracks_re = re.compile(self.config.input_filename_re)
 
     @property
     def mounted(self):
         self.logger.debug('calling gps.mounted()')
         try:
-            stats = os.statvfs(self.config.gps.mount_path)
-            self.logger.debug('Found GPS at path: {0} with blocks free: {1}'.format(self.config.gps.mount_path,
-                                                                                    stats.f_bfree))
+            stats = os.statvfs(self.config.mount_path)
+            self.logger.debug('Found GPS at path: %s with blocks free: %s',
+                              self.config.mount_path,
+                              stats.f_bfree)
         except OSError:
-            self.logger.debug('Unable to locate GPS at path: {0}'.format(self.config.gps.mount_path))
+            self.logger.debug('Unable to locate GPS at path: {0}'.format(self.config.mount_path))
             return False
         return True
 
     @property
     def tracks(self):
-        tracks_path = os.path.expanduser(os.path.join(self.config.gps.mount_path, self.config.gps.tracks_path))
+        tracks_path = os.path.expandvars(os.path.join(self.config.mount_path, self.config.tracks_path))
         self.logger.debug('Looking up activities in path: {0}'.format(tracks_path))
         try:
             raw_tracks = os.listdir(tracks_path)
@@ -46,11 +47,11 @@ class GPS(object):
         """
         self.logger.debug('Attempting to unmount the GPS.')
         # diskutil unmount /Volumes/GARMIN or umount /media/user/GARMIN
-        unmount_subcmd = self.config.gps.unmount_subcmd
-        cmd = [self.config.gps.unmount_cmd]
+        unmount_subcmd = self.config.unmount_subcmd
+        cmd = [self.config.unmount_cmd]
         if unmount_subcmd:
             cmd.append(unmount_subcmd)
-        cmd.append(self.config.gps.mount_path)
+        cmd.append(self.config.mount_path)
 
         sub = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         try:

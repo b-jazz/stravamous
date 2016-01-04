@@ -11,9 +11,9 @@ import sys
 # print(os.getcwd())
 # sys.path.append(os.getcwd())
 
-import configurati
 import gpxpy
 
+import configargparse
 import converter
 import gps
 import progress_db
@@ -34,13 +34,15 @@ class StravamousApp(object):
         self.logger = logging.getLogger()
 
         # config
-        cf = os.path.expanduser('~/.stravamous/config.yaml')
-        try:
-            self.config = configurati.configure(config=cf, spec='config.py')
-        except FileNotFoundError:
-            self.logger.error('Unable to find configuration file: {0}'.format(cf))
-            self.logger.error('Stravamous is unable to function without a definition of tracks to splice. Exiting.')
-            sys.exit(-1)
+        self.config = self.set_up_configuration()
+
+        # cf = os.path.expanduser('$HOME/.stravamous/config.ini')
+        # try:
+        #     self.config = configurati.configure(config=cf, spec='config.py')
+        # except FileNotFoundError:
+        #     self.logger.error('Unable to find configuration file: {0}'.format(cf))
+        #     self.logger.error('Stravamous is unable to function without a definition of tracks to splice. Exiting.')
+        #     sys.exit(-1)
 
         # now that we have a config file, set the debug logging
         if self.config.debug:
@@ -62,6 +64,69 @@ class StravamousApp(object):
         # keep track of how many splices we performed on the last file so we can cleanly
         # unmount on two splices
         self.last_splice_count = 0
+
+    def set_up_configuration(self):
+        """
+
+        """
+        parser = configargparse.ArgParser(default_config_files=['$HOME/.stravamous/config.ini'])
+        #parser = configargparse.ArgParser()
+        parser.add('--debug',
+                   default=False,
+                   action='store_true',
+                   help='Turn on verbose debug logging')
+        parser.add('-c', '--config',
+                   default='$HOME/.stravamous/config.ini',
+                   is_config_file_arg=True,
+                   help='The (full) pathname of your config file')
+        parser.add('--storage_root',
+                   default='$HOME/.stravamous',
+                   help='Directory to find your configs, splices, and output')
+        parser.add('--progress_db',
+                   default='progress.db',
+                   help='The DB name for storing previously processed segments')
+        parser.add('--mount_path',
+                   default='/media/$USER/GARMIN',
+                   help='Path to find GPS mountpoint. ENVVARS will be expanded')
+        parser.add('--input_filename_re',
+                   default='^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}.fit$',
+                   help='Regex for matching the filename input to gpsbabel')
+        parser.add('--tracks_path',
+                   default='Garmin/Activities',
+                   help='Relative path to the mount_path where track files are kept on GPS')
+        parser.add('--distance_precision',
+                   default=25,
+                   type=int,
+                   help='Distance in meters that a track point needs to be within the matching splice point for a match')
+        parser.add('--unmount_gps',
+                   default=False,
+                   action='store_true',
+                   help='Whether the unmount_cmd/subcmd should be called after processing')
+        parser.add('--unmount_cmd',
+                   default='/bin/umount',
+                   help='Command to unmount the GPS')
+        parser.add('--unmount_subcmd',
+                   default=None,
+                   help='A subcommand (if needed) in order to unmount the GPS')
+        parser.add('--gpsbabel_exe',
+                   default='/usr/bin/gpsbabel',
+                   help='Full path to gpsbabel program to convert .fit to .gpx')
+
+        args = parser.parse_args()
+        self.expand_arg_vars(args)
+        return args
+
+    def expand_arg_vars(self, args):
+        """
+        Any of the pathnames are allowed to have environmental variables such as $USER or $HOME and need to be
+        expanded before any use.
+        """
+        args.config = os.path.expandvars(args.config)
+        args.storage_root = os.path.expandvars(args.storage_root)
+        args.progress_db = os.path.expandvars(args.progress_db)
+        args.mount_path = os.path.expandvars(args.mount_path)
+        args.tracks_path = os.path.expandvars(args.tracks_path)
+        args.gpsbabel_exe = os.path.expandvars(args.gpsbabel_exe)
 
     def process_tracks(self):
         """
@@ -124,8 +189,9 @@ class StravamousApp(object):
 
             self.logger.debug('XML chunk: {0}'.format(gpx.to_xml()[:100]))
 
-            spliced_path = os.path.join(self.config.storage.root_path, self.config.storage.spliced_path, out_for_in(input_path))
-            spliced_path = os.path.expanduser(spliced_path)
+            spliced_path = os.path.expandvars(os.path.join(self.config.storage_root,
+                                                           'spliced_files',
+                                                           out_for_in(input_path)))
             self.logger.debug('Opening {0} for writing spliced output.'.format(spliced_path))
             output_fd = open(spliced_path, 'w')
             output_fd.write(gpx.to_xml(version='1.0'))
@@ -133,16 +199,21 @@ class StravamousApp(object):
             self.logger.debug('Output file closed.')
 
     def run(self):
-        if self.config.run_options.once:
-            self.logger.debug('Running the processor just once.')
-            self.process_tracks()
-            if self.config.gps.unmount and self.last_splice_count == 2:
-                self.gps.unmount()
-        else:
-            while True:
-                self.logger.debug('Entering infinite loop with {0} seconds of sleep.'.format(self.config.pollworker.frequency))
-                self.process_tracks()
-                time.sleep(self.config.pollworker.frequency)
+        self.logger.debug('Running the processor just once.')
+        self.process_tracks()
+        if self.config.unmount_gps and self.last_splice_count == 2:
+            self.gps.unmount()
+
+        # if self.config.run_options.once:
+        #     self.logger.debug('Running the processor just once.')
+        #     self.process_tracks()
+        #     if self.config.gps.unmount and self.last_splice_count == 2:
+        #         self.gps.unmount()
+        # else:
+        #     while True:
+        #         self.logger.debug('Entering infinite loop with {0} seconds of sleep.'.format(self.config.pollworker.frequency))
+        #         self.process_tracks()
+        #         time.sleep(self.config.pollworker.frequency)
 
 
 if __name__ == '__main__':

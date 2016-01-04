@@ -8,8 +8,8 @@ class ProgressDB(object):
     def __init__(self, config):
         self.logger = logging.getLogger()
 
-        self.db_path = os.path.join(config.storage.root_path, config.storage.db)
-        self.db_path = os.path.expanduser(self.db_path)
+        self.db_path = os.path.expandvars(os.path.join(config.storage_root, config.progress_db))
+
         try:
             db_file = open(self.db_path, 'rb')
         except IOError as exception:
