@@ -13,12 +13,14 @@ class Converter(object):
         self.config = config
         self.logger = logging.getLogger()
         self.input_file = input_path
-        self.output_file = os.path.expanduser(os.path.join(self.config.storage.root_path, self.config.storage.converted_path, out_for_in(self.input_file)))
+        self.output_file = os.path.expanduser(os.path.join(self.config.storage_root,
+                                                           'converted_files',
+                                                           out_for_in(self.input_file)))
         self.logger.debug('Created converter object with input_file of {0} and output_file of {1}'.format(self.input_file, self.output_file))
         self.gpx_text = None
 
     def convert(self):
-        command = [self.config.gpsbabel.exe,
+        command = [self.config.gpsbabel_cmd,
                    '-i', 'garmin_fit',
                    '-f', self.input_file,
                    '-o', 'gpx,garminextensions',

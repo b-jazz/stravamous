@@ -18,7 +18,7 @@ class Splices(object):
         """
         self.logger = logging.getLogger()
         self.config = config
-        self.precision = self.config.splices.precision
+        self.precision = self.config.distance_precision
         self.splices = dict()
         self.splices['outbound'] = self.discover_splices('outbound')
         self.splices['inbound'] = self.discover_splices('inbound')
@@ -36,7 +36,7 @@ class Splices(object):
         @return: available splices for that direction, sorted alphetically
         @rtype: list
         """
-        direction_path = os.path.expanduser(os.path.join(self.config.splices['root_path'], direction))
+        direction_path = os.path.expandvars(os.path.join(self.config.storage_root, 'splices', direction))
         splices = []
         for item in sorted(os.listdir(direction_path)):
             gpx = self.gpx_for_path(os.path.join(direction_path, item))
