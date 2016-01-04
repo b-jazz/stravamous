@@ -128,7 +128,7 @@ class StravamousApp(object):
             spliced_path = os.path.expanduser(spliced_path)
             self.logger.debug('Opening {0} for writing spliced output.'.format(spliced_path))
             output_fd = open(spliced_path, 'w')
-            output_fd.write(gpx.to_xml())
+            output_fd.write(gpx.to_xml(version='1.0'))
             output_fd.close()
             self.logger.debug('Output file closed.')
 
