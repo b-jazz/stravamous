@@ -46,3 +46,9 @@ data
 
 # Apple's wonky filesystem/UI bastardizations
 .DS_Store
+
+# virtualenv
+.venv/
+venv/
+ENV/
+
